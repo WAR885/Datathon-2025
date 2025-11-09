@@ -9,4 +9,4 @@ One can also see the most in demand items/ingredients and pivot towards advertis
 
 Lastly, next month's prediction can help create a profit forecast as well as understanding which items are in demand, thus understanding how many of these items to make.
 
-NOTE: There is a bug where the widget for the monthly data is squished. It only sometimes does this and I was not able to figure this bug out. If this happens, run the program again and it shouldn't be squished" 
+NOTE: There is a bug where the widget for the monthly data is squished if you enter it while in full screen.Enter the monthly data tab first and then go full screen. I did not have enough time to figure out how to debug this." 
