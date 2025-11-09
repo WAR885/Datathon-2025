@@ -50,26 +50,20 @@ profits_fig = None  # replace with your matplotlib.figure.Figure if you have one
 # Option B: If you have a saved profit image, set this path (png/jpg)
 PROFITS_IMAGE_PATH = "total_earnings.png"  # e.g. "profits.png"
 
+profits_data = data_insights.yearly_earnings
+
 # Example processed lists (replace with your actual processed results)
-overall_top_items = [("Spicy Tofu Bowl", 120), ("Beef Ramen", 105), ("Green Curry", 95)]
-overall_top_ingredients = [("Rice", 5100), ("Chicken", 4200), ("Coconut milk", 3800)]
+overall_top_items = sorted(((k, int(v)) for k, v in data_insights.total_pop_items.items()), key=lambda kv: kv[1], reverse=True)
+overall_top_ingredients = sorted(((k, int(v)) for k, v in data_insights.total_pop_ingredients.items()), key=lambda kv: kv[1], reverse=True)
 
-monthly_top_items = {
-    "Jan": [("Spicy Tofu Bowl", 10), ("Green Curry", 9), ("Beef Ramen", 8)],
-    "Feb": [("Beef Ramen", 14), ("Spicy Tofu Bowl", 12), ("Green Curry", 10)],
-    "Mar": [("Green Curry", 11), ("Spicy Tofu Bowl", 10), ("Beef Ramen", 9)],
-    # ... include all months you have
-}
-monthly_top_ingredients = {
-    "Jan": [("Rice", 400), ("Chicken", 350), ("Coconut milk", 300)],
-    "Feb": [("Rice", 420), ("Chicken", 380), ("Coconut milk", 320)],
-    "Mar": [("Rice", 390), ("Chicken", 360), ("Coconut milk", 310)],
-    # ...
-}
+monthly_top_items = data_insights.item_pops
 
-predicted_profit = 2450.75
-predicted_top_items = [("Spicy Tofu Bowl", 18), ("Beef Ramen", 16), ("Green Curry", 15)]
-predicted_top_ingredients = [("Rice", 520), ("Chicken", 450), ("Coconut milk", 400)]
+
+monthly_top_ingredients = data_insights.ingredient_pops
+
+predicted_profit = data_insights.projected_earnings
+predicted_top_items = items = sorted(((k, int(v)) for k, v in data_insights.projected_pop_items.items()), key=lambda kv: kv[1], reverse=True)
+predicted_top_ingredients = sorted(((k, int(v)) for k, v in data_insights.projected_pop_ingredients.items()), key=lambda kv: kv[1], reverse=True)
 
 # ---------------------------
 # End of user-editable data
@@ -175,8 +169,6 @@ class DashboardApp(ttk.Frame):
         self.ing_tree.column("amt", width=80, anchor='center')
         self.ing_tree.pack(pady=(0,8))
 
-        btn_refresh = ttk.Button(right, text="Refresh data", command=self.refresh_overall)
-        btn_refresh.pack(side='bottom', pady=6)
         self.refresh_overall()
 
     def refresh_overall(self):
@@ -210,10 +202,7 @@ class DashboardApp(ttk.Frame):
         bot.pack(fill='both', expand=True, padx=8, pady=(4,8))
 
         ttk.Label(top, text="Select month:", font=("Segoe UI", 10)).pack(side='left', padx=(0,8))
-        month_list = sorted(set(list(monthly_top_items.keys()) + list(monthly_top_ingredients.keys())))
-        if not month_list:
-            # fallback to months in profits_data
-            month_list = [m for m,_ in profits_data]
+        month_list = ["May","June","July","August","September","October"]
 
         self.month_cb = ttk.Combobox(top, values=month_list, state="readonly")
         self.month_cb.pack(side='left')
@@ -221,10 +210,10 @@ class DashboardApp(ttk.Frame):
             self.month_cb.set(month_list[0])
         self.month_cb.bind("<<ComboboxSelected>>", lambda e: self.populate_month_view())
 
-        # right side: export month CSV button
-        btn_export = ttk.Button(top, text="Export month CSV", command=self.export_month_csv)
-        btn_export.pack(side='right')
 
+        self.month_fig, self.month_ax = plt.subplots(figsize=(5,3), dpi=100)
+        self.month_canvas = FigureCanvasTkAgg(self.month_fig, master=bot)
+        self.month_canvas.get_tk_widget().pack(fill='both', expand=True, pady=(2,2))
         # Two Treeviews side-by-side for items & ingredients
         left = ttk.Frame(bot)
         right = ttk.Frame(bot)
@@ -252,48 +241,43 @@ class DashboardApp(ttk.Frame):
 
     def populate_month_view(self):
         m = self.month_cb.get()
+        month_names = {"May": 0, "June": 1, "July": 2, "August": 3, "September": 4, "October": 5}
+
+        month_index = month_names[m]
+        d = monthly_top_items[month_index]
+        items = sorted(((k, int(v)) for k, v in d.items()), key=lambda kv: kv[1], reverse=True)[:7]
+
+        # Clear old plot
+        self.month_ax.clear()
+        if items:
+            names = [x[0] for x in items]
+            counts = [x[1] for x in items]
+            self.month_ax.bar(names, counts)
+            self.month_ax.set_title(f"Top Items in {m}")
+            self.month_ax.set_ylabel("Count")
+            self.month_ax.set_xticklabels(names, rotation=0, ha='center')
+
+        self.month_canvas.draw()
         # clear
         for r in self.month_items.get_children(): self.month_items.delete(r)
         for r in self.month_ings.get_children(): self.month_ings.delete(r)
 
-        items = monthly_top_items.get(m, [])
-        ings = monthly_top_ingredients.get(m, [])
+        d = monthly_top_items[month_names[m]]
+        items = [(k, int(v)) for k, v in sorted(d.items(), key=lambda kv: kv[1], reverse=True)]
+        d = monthly_top_ingredients[month_names[m]]
+        ings = [(k, int(v)) for k, v in sorted(d.items(), key=lambda kv: kv[1], reverse=True)]
+
         if not items:
             # fallback: empty placeholders
             items = []
         if not ings:
             ings = []
 
-        for name, cnt in items[:3]:
+        for name, cnt in items[:7]:
             self.month_items.insert("", "end", values=(name, cnt))
-        for name, amt in ings[:3]:
+        for name, amt in ings[:7]:
             self.month_ings.insert("", "end", values=(name, amt))
 
-    def export_month_csv(self):
-        m = self.month_cb.get()
-        if not m:
-            messagebox.showwarning("No month", "Please select a month to export.")
-            return
-        fname = filedialog.asksaveasfilename(defaultextension=".csv",
-                                             filetypes=[("CSV files","*.csv"),("All files","*.*")],
-                                             title=f"Save {m} data as...")
-        if not fname:
-            return
-        try:
-            with open(fname, "w", newline='', encoding='utf-8') as f:
-                writer = csv.writer(f)
-                writer.writerow([f"Month: {m}"])
-                writer.writerow([])
-                writer.writerow(["Top 3 Items", "Count"])
-                for name, cnt in monthly_top_items.get(m, [])[:3]:
-                    writer.writerow([name, cnt])
-                writer.writerow([])
-                writer.writerow(["Top 3 Ingredients", "Amount"])
-                for name, amt in monthly_top_ingredients.get(m, [])[:3]:
-                    writer.writerow([name, amt])
-            messagebox.showinfo("Saved", f"Exported month data to:\n{fname}")
-        except Exception as e:
-            messagebox.showerror("Error", f"Could not save file:\n{e}")
 
     # ---------------
     # FUTURE PREDICTION
@@ -326,20 +310,24 @@ class DashboardApp(ttk.Frame):
         right.pack(side='right', fill='both', expand=True, padx=(4,0))
 
         ttk.Label(left, text="Predicted Top Menu Items", font=("Segoe UI", 11, "bold")).pack(anchor='nw')
-        self.pred_items_view = ttk.Treeview(left, columns=("item","pred"), show="headings")
+        self.pred_items_view = ttk.Treeview(left, columns=("item","pred"), show="headings", height = 6)
         self.pred_items_view.heading("item", text="Item")
         self.pred_items_view.heading("pred", text="Predicted")
         self.pred_items_view.column("item", width=260, anchor='w')
         self.pred_items_view.column("pred", width=80, anchor='center')
-        self.pred_items_view.pack(fill='both', expand=True, pady=(4,8))
+        self.pred_items_view.pack(fill='x', expand=False, pady=(4,8))
 
         ttk.Label(right, text="Predicted Top Ingredients", font=("Segoe UI", 11, "bold")).pack(anchor='nw')
-        self.pred_ings_view = ttk.Treeview(right, columns=("ing","pred"), show="headings")
+        self.pred_ings_view = ttk.Treeview(right, columns=("ing","pred"), show="headings", height=6)
         self.pred_ings_view.heading("ing", text="Ingredient")
         self.pred_ings_view.heading("pred", text="Predicted")
         self.pred_ings_view.column("ing", width=260, anchor='w')
         self.pred_ings_view.column("pred", width=80, anchor='center')
-        self.pred_ings_view.pack(fill='both', expand=True, pady=(4,8))
+        self.pred_ings_view.pack(fill='x', expand=False, pady=(4,8))
+
+        self.future_fig, self.future_ax = plt.subplots(figsize=(5,3), dpi=100)
+        self.future_canvas = FigureCanvasTkAgg(self.future_fig, master=frame)
+        self.future_canvas.get_tk_widget().pack(fill='both', expand=True, pady=(4,8))
 
         btn_export = ttk.Button(frame, text="Export predictions CSV", command=self.export_predictions)
         btn_export.pack(side='bottom', pady=(8,0))
@@ -366,6 +354,18 @@ class DashboardApp(ttk.Frame):
         for r in self.pred_ings_view.get_children(): self.pred_ings_view.delete(r)
         for n,v in predicted_top_ingredients[:5]:
             self.pred_ings_view.insert("", "end", values=(n, v))
+
+        # Draw bar chart for predicted top items
+        self.future_ax.clear()
+        names = [n for n,v in predicted_top_items[:7]]
+        vals = [v for n,v in predicted_top_items[:7]]
+        self.future_ax.bar(names, vals)
+        self.future_ax.set_title("Predicted Top Menu Items")
+        self.future_ax.set_ylabel("Projected Count")
+        self.future_ax.set_xticklabels(names, rotation=0, ha='center')
+        self.month_ax.tick_params(axis='x', labelsize=8)
+        self.future_canvas.draw()
+
 
     def export_predictions(self):
         fname = filedialog.asksaveasfilename(defaultextension=".csv",

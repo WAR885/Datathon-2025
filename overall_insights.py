@@ -26,5 +26,9 @@ class overall_insights:
             self.ingredient_pops.append(get_monthly_ingredient_popularity(self.sales_data[i][1],self.ingredient_data))
         graph_earnings(calculate_yearly_earnings(self.sales_data))
 
-    def top3_keys_by_value(d):
-        return [k for k, v in heapq.nlargest(3, d.items(), key=lambda item: item[1])]
+        self.total_pop_items = calculate_total_item_popularities(self.item_pops)
+        self.total_pop_ingredients = calculate_total_ingredient_popularities(self.ingredient_pops)
+
+        self.projected_earnings = predict_next_monthly_earnings(6,self.yearly_earnings)
+        self.projected_pop_items = predict_all_item_popularities(self.item_pops,6)
+        self.projected_pop_ingredients = predict_all_ingredient_popularities(self.ingredient_pops,6)
