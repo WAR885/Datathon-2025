@@ -3,7 +3,6 @@ import pandas as pd
 import re
 
 def process_ingredient_data(path:str) -> dict:
-    ingredients_data = []
     df = pd.read_csv(path, header=None)
     ingredient_names = df.iloc[0,1:].to_list()
     all_ingredients = {}
@@ -19,5 +18,3 @@ def normalize(item) -> float:
     if(pd.isna(item)):
         return 0
     return float(item)
-
-print(process_ingredient_data("mai-shen-yun-main\\MSY Data - Ingredient.csv"))

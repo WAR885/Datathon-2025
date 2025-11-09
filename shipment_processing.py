@@ -17,4 +17,3 @@ def process_shipment_data(path:str) -> dict:
         ingredient_data["amount_per_month"] = int(temp[2])*int(temp[4])*shipment_amount[temp[5].lower()]
         ingredients_data.append(ingredient_data)
     return ingredients_data
-print(process_shipment_data("mai-shen-yun-main\\MSY Data - Shipment.csv"))

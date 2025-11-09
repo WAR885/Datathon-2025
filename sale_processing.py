@@ -32,4 +32,3 @@ def make_dictionary(raw_data:str) -> dict:
 
 
 data_for_items = process_sale_data("mai-shen-yun-main\October_Data_Matrix_20251103_214000.xlsx")
-print(data_for_items[1])
